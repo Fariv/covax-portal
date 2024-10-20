@@ -4,7 +4,7 @@
         <h5>
             Dear {{ $user->name }},
             <br />
-            On {{ \Carbon\Carbon::parse($scheduleDate)->format('d-m-Y') ; }} at 10 AM, please stay at your selected venue for Vaccination.
+            On {{ \Carbon\Carbon::parse($scheduleDate)->format('d-m-Y') ; }} at 10 AM, please stay at the venue <span style="color: blueviolet;">{{ $user->vaccinecenters[0]->name }}</span> for Vaccination.
             <br />
             <br />
             Regards

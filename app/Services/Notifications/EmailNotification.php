@@ -17,7 +17,7 @@ class EmailNotification extends NotificationAbstract
 
     public function sendLater(array $data): void
     {
-        Log::info('Preparing to send vaccination reminder to: ' . $data['user']->email . ' at ' . $data['scheduleDate']);
+        Log::info('Preparing to send vaccination reminder to: ' . $data['user']->email);
 
         try {
             // Assuming the user's timezone is available in $data
@@ -28,7 +28,8 @@ class EmailNotification extends NotificationAbstract
                 ->subDay()
                 ->setTimezone($userTimezone) // Set to user's timezone
                 ->setTime(21, 0); // Set to 9 PM in user's timezone
-
+            
+            Log::info('scheduledDate: ' . $scheduledDate->toDateTimeString());
             // Convert to UTC for storing in the queue
             $scheduledDateUTC = $scheduledDate->setTimezone('UTC');
 

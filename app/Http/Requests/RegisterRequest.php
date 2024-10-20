@@ -26,7 +26,8 @@ class RegisterRequest extends FormRequest
             "email" => "required|string|email|unique:App\Models\User,email|max:255",
             "nid" => "required|string|unique:App\Models\User,nid",
             "password" => "required|string|min:8",
-            "center" => "required",
+            'center' => 'required|exists:vaccine_centers,id',
+            'timezone' => 'required|string',
         );
     }
 

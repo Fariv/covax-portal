@@ -36,7 +36,7 @@ class VaccineCenterService extends VaccineCenterServiceAbstract
             Log::info('Vaccine center found: ' . $vaccineCenter->id);
 
             // Calculate the next available date, skipping weekends (Friday, Saturday)
-            $nextAvailableDate = $this->getNextAvailableVaccinationDate($vaccineCenter);
+            $nextAvailableDate = $this->getNextAvailableVaccinationDate($vaccineCenter, $timezone);
             Log::info('Next available vaccination date: ' . $nextAvailableDate);
 
             $insertData = [
@@ -75,31 +75,49 @@ class VaccineCenterService extends VaccineCenterServiceAbstract
      * @param VaccineCenter $vaccineCenter
      * @return Carbon
      */
-    private function getNextAvailableVaccinationDate(VaccineCenter $vaccineCenter): Carbon
+    private function getNextAvailableVaccinationDate(VaccineCenter $vaccineCenter, string $userTimezone): Carbon
     {
-        $currentDate = Carbon::now();
-        $vaccinatedCount = DB::table('users_vaccine_centers')
-            ->where('centers_id', $vaccineCenter->id)
-            ->where('schedule_vaccination_date', '>=', $currentDate->startOfDay())
-            ->count();
-        Log::info('vaccinatedCount: ' . $vaccinatedCount);
+        $currentDate = Carbon::now($userTimezone);
+        $currentHour = $currentDate->hour;
 
-        $maxLimit = $vaccineCenter->maximum_limit;
-        Log::info('maxLimit: ' . $maxLimit);
+        // Check if current time is after 9 AM
+        if ($currentHour >= 9) {
+            $currentDate->addDay(); // Move to the next day since the user can't be assigned on the same day after 10 AM
+        }
 
-        Log::info('checkDateAvail: ' . ($currentDate->isFriday() || $currentDate->isSaturday() || $vaccinatedCount > $maxLimit));
+        Log::info('checkDateAvail: ' . ($currentDate->isFriday() || $currentDate->isSaturday()));
         // Find the next available date that is not a weekend
-        while ($currentDate->isFriday() || $currentDate->isSaturday() || $vaccinatedCount >= $maxLimit) {
+        while ($currentDate->isFriday() || $currentDate->isSaturday() || $this->isDateFullyBooked($currentDate, $vaccineCenter)) {
             $currentDate->addDay();
-            Log::info('currentDate after day added: ' . $currentDate->toDateTimeString());
-            $vaccinatedCount = DB::table('users_vaccine_centers')
-                ->where('centers_id', $vaccineCenter->id)
-                ->where('schedule_vaccination_date', $currentDate->toDateTimeString())
-                ->count();
-            Log::info('vaccinatedCountLoop: ' . $vaccinatedCount);
-            Log::info('addedDay: ' . $currentDate->format("d-m-Y"));
+            Log::info('currentDate after day added: ' . $currentDate->startOfDay());
         }
 
         return $currentDate;
+    }
+
+    public function getAllCenters()
+    {
+        $centers = VaccineCenter::select('id', 'name')->orderBy('sort', 'asc')->get();
+
+        return $centers;
+    }
+
+    /**
+     * Check if the vaccination date is fully booked.
+     *
+     * @param Carbon $date
+     * @param VaccineCenter $vaccineCenter
+     * @return bool
+     */
+    private function isDateFullyBooked(Carbon $date, VaccineCenter $vaccineCenter): bool
+    {
+        $vaccinatedCount = DB::table('users_vaccine_centers')
+            ->where('centers_id', $vaccineCenter->id)
+            ->whereBetween('schedule_vaccination_date', [$date->startOfDay(), $date->endOfDay()]) // Full day range
+            ->count();
+
+        Log::info('vaccinatedCount: ' . $vaccinatedCount . ' for date: ' . $date->startOfDay());
+
+        return $vaccinatedCount >= $vaccineCenter->maximum_limit;
     }
 }

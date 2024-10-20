@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class VaccineCenter extends Model
 {
@@ -19,9 +20,8 @@ class VaccineCenter extends Model
         'maximum_limit',
     ];
 
-    // Define any relationships, for example, if a center can have many users
-    public function users()
+    public function users(): BelongsToMany
     {
-        return $this->hasMany(User::class, 'centers_id');
+        return $this->belongsToMany(User::class, 'centers_id', 'users_id');
     }
 }
